@@ -1,20 +1,24 @@
 {
-  "name": "rehype-suite",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.12.0",
-      "onFail": "download"
-    }
-  },
-  "type": "module"
+	"name": "rehype-suite",
+	"private": true,
+	"scripts": {
+		"build": "pnpm -r build",
+		"test": "pnpm -r test",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"check:all": "biome check ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.10",
+		"typescript": "^5.7.2",
+		"vitest": "^2.1.0"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "^11.12.0",
+			"onFail": "download"
+		}
+	},
+	"type": "module"
 }
