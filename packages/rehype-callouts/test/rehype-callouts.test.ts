@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { unified } from "unified";
+import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import rehypeStringify from "rehype-stringify";
+import { unified } from "unified";
+import { describe, expect, it } from "vitest";
 import rehypeCallouts from "../src/index.js";
 
 async function render(markdown: string): Promise<string> {
@@ -13,7 +13,7 @@ async function render(markdown: string): Promise<string> {
 		.use(rehypeStringify)
 		.process(markdown);
 
-	return String(file);
+	return String(file).replace(/>\s+</g, "><").trim();
 }
 
 describe("rehypeCallouts", () => {
@@ -34,6 +34,12 @@ describe("rehypeCallouts", () => {
 	it("matches marker types without regard to case and keeps same-line body text", async () => {
 		await expect(render("> [!tip] Save time.")).resolves.toBe(
 			'<div class="callout callout-tip" data-callout="tip"><div class="callout-title"><span>Tip</span></div><div class="callout-body"><p>Save time.</p></div></div>',
+		);
+	});
+
+	it("keeps body text attached directly to the marker", async () => {
+		await expect(render("> [!NOTE]Body text.")).resolves.toBe(
+			'<div class="callout callout-note" data-callout="note"><div class="callout-title"><span>Note</span></div><div class="callout-body"><p>Body text.</p></div></div>',
 		);
 	});
 
@@ -59,16 +65,17 @@ describe("rehypeCallouts", () => {
 	});
 
 	it.each([
-		"> [! NOTE]",
-		"> Text [!NOTE]",
-		"> *Emphasis* [!NOTE]",
-		"> [!NO**TE**]",
+		["> [! NOTE]", "[! NOTE]"],
+		["> [NOTE]", "[NOTE]"],
+		["> Text [!NOTE]", "Text [!NOTE]"],
+		["> *Emphasis* [!NOTE]", "[!NOTE]"],
+		["> [!NO**TE**]", "[!NO<strong>TE</strong>]"],
 	])(
 		"preserves malformed or misplaced marker input: %s",
-		async (markdown) => {
+		async (markdown, unchangedContent) => {
 			const html = await render(markdown);
 			expect(html).toContain("<blockquote>");
-			expect(html).toContain("[!NOTE]");
+			expect(html).toContain(unchangedContent);
 			expect(html).not.toContain('class="callout');
 		},
 	);
@@ -85,16 +92,12 @@ describe("rehypeCallouts", () => {
 
 		expect(linkHtml).toContain('<a href="https://example.com">Docs</a>');
 		expect(imageHtml).toContain('<img src="diagram.png" alt="diagram">');
-		expect(imageHtml).toContain('<p><img');
+		expect(imageHtml).toContain("<p><img");
 	});
 
 	it("preserves soft and hard line breaks in the body", async () => {
-		const softBreak = await render(
-			"> [!NOTE]\n> First line\n> Second line",
-		);
-		const hardBreak = await render(
-			"> [!NOTE]\n> First line  \n> Second line",
-		);
+		const softBreak = await render("> [!NOTE]\n> First line\n> Second line");
+		const hardBreak = await render("> [!NOTE]\n> First line  \n> Second line");
 
 		expect(softBreak).toContain("First line\nSecond line");
 		expect(hardBreak).toContain("<br>");
@@ -107,24 +110,33 @@ describe("rehypeCallouts", () => {
 		);
 
 		expect(html).toContain("<ul><li>one</li><li>two</li></ul>");
-		expect(html).toContain('<code class="language-js">const answer = 42</code>');
+		expect(html).toMatch(
+			/<code class="language-js">const answer = 42\n?<\/code>/,
+		);
 	});
 
 	it("converts callouts inside lists", async () => {
 		const html = await render("- item\n\n  > [!TIP]\n  > Nested list callout.");
 
-		expect(html).toContain('<div class="callout callout-tip" data-callout="tip">');
+		expect(html).toContain(
+			'<div class="callout callout-tip" data-callout="tip">',
+		);
 		expect(html).toContain("Nested list callout.");
 	});
 
 	it("keeps nested callout markers as blockquotes", async () => {
-		const html = await render(
+		const recognizedOuter = await render(
 			"> [!NOTE]\n> Outer content.\n>\n> > [!TIP]\n> > Nested content.",
 		);
+		const ordinaryOuter = await render(
+			"> Outer content.\n>\n> > [!TIP]\n> > Nested content.",
+		);
 
-		expect(html.match(/class="callout /g)).toHaveLength(1);
-		expect(html).toContain("<blockquote>");
-		expect(html).toContain("[!TIP]");
+		expect(recognizedOuter.match(/class="callout /g)).toHaveLength(1);
+		expect(recognizedOuter).toContain("<blockquote>");
+		expect(recognizedOuter).toContain("[!TIP]");
+		expect(ordinaryOuter).not.toContain('class="callout');
+		expect(ordinaryOuter).toContain("[!TIP]");
 	});
 
 	it("uses visible labels without adding ARIA roles or raw SVG", async () => {
