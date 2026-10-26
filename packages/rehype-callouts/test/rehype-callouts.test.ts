@@ -1,3 +1,4 @@
+import type { Element, Root } from "hast";
 import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -137,6 +138,87 @@ describe("rehypeCallouts", () => {
 		expect(recognizedOuter).toContain("[!TIP]");
 		expect(ordinaryOuter).not.toContain('class="callout');
 		expect(ordinaryOuter).toContain("[!TIP]");
+	});
+
+	it("preserves nested blockquotes when the same tree is processed twice", () => {
+		const nestedQuote: Element = {
+			type: "element",
+			tagName: "blockquote",
+			properties: {},
+			children: [
+				{
+					type: "element",
+					tagName: "p",
+					properties: {},
+					children: [{ type: "text", value: "[!TIP] Nested content." }],
+				},
+			],
+		};
+		const outerQuote: Element = {
+			type: "element",
+			tagName: "blockquote",
+			properties: {},
+			children: [
+				{
+					type: "element",
+					tagName: "p",
+					properties: {},
+					children: [{ type: "text", value: "[!NOTE] Outer content." }],
+				},
+				nestedQuote,
+			],
+		};
+		const tree: Root = { type: "root", children: [outerQuote] };
+		const transform = rehypeCallouts();
+
+		transform(tree);
+		transform(tree);
+
+		const outerCallout = tree.children[0] as Element;
+		const body = outerCallout.children[1] as Element;
+		expect(outerCallout.properties.dataCallout).toBe("note");
+		expect((body.children[1] as Element).tagName).toBe("blockquote");
+		expect((body.children[1] as Element).children[0]).toMatchObject({
+			tagName: "p",
+			children: [{ value: "[!TIP] Nested content." }],
+		});
+	});
+
+	it("walks deeply nested HAST without relying on the JavaScript call stack", () => {
+		const depth = 10_000;
+		let deepest: Element = {
+			type: "element",
+			tagName: "blockquote",
+			properties: {},
+			children: [
+				{
+					type: "element",
+					tagName: "p",
+					properties: {},
+					children: [{ type: "text", value: "[!NOTE] Deep content." }],
+				},
+			],
+		};
+
+		for (let index = 0; index < depth; index += 1) {
+			deepest = {
+				type: "element",
+				tagName: "div",
+				properties: {},
+				children: [deepest],
+			};
+		}
+
+		const tree: Root = { type: "root", children: [deepest] };
+		rehypeCallouts()(tree);
+
+		let current = tree.children[0] as Element;
+		for (let index = 0; index < depth; index += 1) {
+			current = current.children[0] as Element;
+		}
+
+		expect(current.tagName).toBe("div");
+		expect(current.properties.dataCallout).toBe("note");
 	});
 
 	it("uses visible labels without adding ARIA roles or raw SVG", async () => {
