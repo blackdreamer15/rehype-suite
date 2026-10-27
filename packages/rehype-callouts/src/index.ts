@@ -79,28 +79,53 @@ function createCallout(blockquote: Element): Element | undefined {
 	};
 }
 
-function transformChildren(
-	parent: Root | Element,
-	insideBlockquote = false,
-): void {
-	for (let index = 0; index < parent.children.length; index += 1) {
-		const child = parent.children[index];
-		if (!isElement(child)) continue;
+function isCallout(node: Element): boolean {
+	const type = node.properties.dataCallout;
+	const classes = node.properties.className;
 
-		if (child.tagName === "blockquote") {
-			if (insideBlockquote) continue;
+	return (
+		type !== undefined &&
+		Array.isArray(classes) &&
+		classes.includes("callout") &&
+		classes.includes(`callout-${type}`)
+	);
+}
 
-			const callout = createCallout(child);
-			if (callout) {
-				parent.children.splice(index, 1, callout);
+function transformChildren(parent: Root | Element): void {
+	const pending: Array<{
+		parent: Root | Element;
+		insideBlockquote: boolean;
+	}> = [{ parent, insideBlockquote: false }];
+
+	while (pending.length > 0) {
+		const current = pending.pop();
+		if (!current) continue;
+
+		for (let index = 0; index < current.parent.children.length; index += 1) {
+			const child = current.parent.children[index];
+			if (!isElement(child)) continue;
+
+			if (child.tagName === "blockquote") {
+				if (current.insideBlockquote) continue;
+
+				const callout = createCallout(child);
+				if (callout) {
+					current.parent.children.splice(index, 1, callout);
+					continue;
+				}
+
+				pending.push({ parent: child, insideBlockquote: true });
 				continue;
 			}
 
-			transformChildren(child, true);
-			continue;
-		}
+			// A later pass must not reinterpret blockquotes preserved inside a callout body.
+			if (isCallout(child)) continue;
 
-		transformChildren(child, insideBlockquote);
+			pending.push({
+				parent: child,
+				insideBlockquote: current.insideBlockquote,
+			});
+		}
 	}
 }
 
