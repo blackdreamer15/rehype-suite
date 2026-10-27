@@ -1,5 +1,5 @@
 {
-	"name": "@blackdreamer15/rehype-callouts",
+	"name": "@jessybaki/rehype-callouts",
 	"version": "0.1.0",
 	"description": "Transform GitHub-style alert blockquotes into CSS-free HAST callouts.",
 	"author": "Jessy Justice Julien Baki",

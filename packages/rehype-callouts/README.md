@@ -1,4 +1,4 @@
-# @blackdreamer15/rehype-callouts
+# @jessybaki/rehype-callouts
 
 Transform GitHub-style alert blockquotes into CSS-free callout markup in a rehype pipeline.
 
@@ -7,13 +7,13 @@ This package handles the HAST transform only. It does not provide styles, icons,
 ## Install
 
 ```sh
-npm install @blackdreamer15/rehype-callouts
+npm install @jessybaki/rehype-callouts
 ```
 
 Use it in a unified pipeline after Markdown has been converted to HAST:
 
 ```js
-import rehypeCallouts from "@blackdreamer15/rehype-callouts";
+import rehypeCallouts from "@jessybaki/rehype-callouts";
 import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
