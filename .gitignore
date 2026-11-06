@@ -14,3 +14,6 @@ yarn-debug.log*
 build/
 out/
 .eslintcache
+.pnpm-store/
+_docs/
+AGENTS.md
