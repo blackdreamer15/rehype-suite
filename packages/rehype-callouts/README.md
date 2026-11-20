@@ -69,7 +69,7 @@ function rehypeCallouts(): (tree: Root) => void;
 
 ## Compatibility
 
-- Node.js 22 and newer. The package is ESM-only; the release candidate has been tested on Node.js 22, 24, and 26.
+- Node.js 22 and newer. The package is ESM-only and has been tested on Node.js 22, 24, and 26.
 - Use in a unified processor after the Markdown-to-HAST step, such as `remark-rehype`.
 - No runtime JavaScript dependencies. TypeScript declarations reference `@types/hast`, which is installed as a package dependency.
 
